@@ -1,0 +1,3 @@
+[submodule "algorithms"]
+	path = algorithms
+	url = git@github.com:capncanuck/AlgorithmsProject.git
