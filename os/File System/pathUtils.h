@@ -14,3 +14,6 @@ int parsePath(char** path, char* pathname);
 
 // Traverse through the file system and retrieve the blockID of the last component.
 int traverse(int* blockID, char** path);
+
+// Strip last component from file name
+int dirname(char** dir, char** path);

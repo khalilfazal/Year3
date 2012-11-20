@@ -20,8 +20,11 @@
  ******************************************************/
 #include <stdio.h>
 
-/* Header File for implementations fo the sfs_* functions */
+// Header File for implementations for the sfs_* functions.
 #include "fileSystem.h"
+
+
+#include "openFiles.h"
 /*****************************************************
  templates for the sfs interface functions
  ******************************************************/
@@ -69,6 +72,8 @@ int main() {
     int i;
     int retval; /* used to hold return values of file system calls */
 
+    // Run constructor for table
+    openTable.length = 0;
     /* do forever:
      1) print a list of available commands
      2) read a command

@@ -3,6 +3,9 @@
  *
  */
 
+#define BLOCKS 512
+#define BLOCK_SIZE 128
+
 // Opens a file descriptor to the file.
 int sfs_open(char* pathname);
 

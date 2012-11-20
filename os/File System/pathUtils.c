@@ -88,8 +88,10 @@ int parsePath(char** path, char* pathname) {
  * @blockID     Integer             blockID of the last component
  * @path        Array of Strings    a list of path components to traverse
  *
- * return 0:                        successful execution
- * return 1:                        error retrieving the path component from the file control block
+ * return  0:                       successful execution
+ * return -1:                       error getting the file type
+ * return -2:                       error in interpreting a regular file as a directory
+ * return -3:                       error retrieving the path component from the file control block
  */
 int traverse(int* blockID, char** path) {
 
@@ -97,6 +99,19 @@ int traverse(int* blockID, char** path) {
     blockID = ROOT_BLOCK;
 
     for (int i = 0; i < LENGTH(path); i++) {
+        int type;
+
+        // Get the file type of the file component
+        if(!getType(type, blockID, path[i])) {
+            fprintf("Error getting the file type.\n");
+            return -1;
+        }
+
+        // If a component in the middle of a path is not a directory
+        if (type == 0 && i < LENGTH(path) - 1) {
+            fprintf("Error in interpreting a regular file as a directory.\n");
+            return -2;
+        }
 
         // If the file control block can not be read for path[i].
         if (!getStart(&blockID, blockID, path[i])) {
@@ -108,8 +123,27 @@ int traverse(int* blockID, char** path) {
                 fprintf(stderr, "/");
             }
 
-            fprintf(stderr, "\n.");
-            return 1;
+            fprintf(stderr, ".\n");
+            return -3;
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * dirname: Strip last component from file name.
+ * The parent directory of the root directory is the root directory
+ *
+ * @dir     String      the path to the parent directory of a file component
+ * @path    String      the path to a file component
+ */
+int dirname(char** dir, char** path) {
+    if (LENGTH(path) == 0) {
+        dir = path;
+    } else {
+        for (int i = 0; i < LENGTH(path) - 1; i++) {
+            dir[i] = path[i];
         }
     }
 
