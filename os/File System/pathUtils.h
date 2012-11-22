@@ -5,7 +5,7 @@
 
 #define MAX_PATH 512
 #define MAX_DIRNAME 7
-#define ROOT_BLOCK 0
+#define ROOT_BLOCKID 0
 
 #define LENGTH(x) sizeof(x)/sizeof(*x)
 
@@ -17,3 +17,6 @@ int traverse(int* blockID, char** path);
 
 // Strip last component from file name
 int dirname(char** dir, char** path);
+
+// Finds the length of an array terminated with a null char
+int arrayLen(char** array);

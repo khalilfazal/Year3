@@ -24,7 +24,7 @@ int sfs_open(char* pathname) {
     char path[MAX_PATH][MAX_DIRNAME];
 
     // Parse the pathname
-    if (!parsePath(path, pathname)) {
+    if (parsePath(path, pathname)) {
         fprintf(stderr, "Error parsing the path.\n");
         return -1;
     }
@@ -32,7 +32,7 @@ int sfs_open(char* pathname) {
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (!traverse(&blockID, path)) {
+    if (traverse(&blockID, path)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -2;
     }
@@ -40,7 +40,7 @@ int sfs_open(char* pathname) {
     int fd;
 
     // Add the opened block to the file open table
-    if (!add(&fd, blockID)) {
+    if (add(&fd, blockID)) {
         fprintf(stderr, "Error adding block id to the file open table.\n");
         return -3;
     }
@@ -63,7 +63,7 @@ int sfs_read(int fd, int start, int length, char* mem_pointer) {
     int blockID;
 
     // Find the block id corresponding to the file descriptor from the file open table
-    if (!find(&blockID, fd)) {
+    if (find(&blockID, fd)) {
         fprintf(stderr, "Error finding opened block id from the file open table.\n");
         return -1;
     }
@@ -86,7 +86,7 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
     int blockID;
 
     // Find the block id corresponding to the file descriptor from the file open table
-    if (!find(&blockID, fd)) {
+    if (find(&blockID, fd)) {
         fprintf(stderr, "Error finding opened block id from the file open table.\n");
         return -1;
     }
@@ -107,7 +107,7 @@ int sfs_readdir(int fd, char* mem_pointer) {
     int blockID;
 
     // Find the block id corresponding to the file descriptor from the file open table
-    if (!find(&blockID, fd)) {
+    if (find(&blockID, fd)) {
         fprintf(stderr, "Error finding opened block id from the file open table.\n");
         return -1;
     }
@@ -126,7 +126,7 @@ int sfs_readdir(int fd, char* mem_pointer) {
 int sfs_close(int fd) {
 
     // Delete entry in the file open table
-    if (!delete(fd)) {
+    if (delete(fd)) {
         fprintf(stderr, "Error deleting entry in the file open table corresponding to the file descriptor %d.\n", fd);
         return -1;
     }
@@ -146,7 +146,7 @@ int sfs_delete(char* pathname) {
     char path[MAX_PATH][MAX_DIRNAME];
 
     // Parse the pathname
-    if (!parsePath(path, pathname)) {
+    if (parsePath(path, pathname)) {
         fprintf(stderr, "Error parsing the path.\n");
         return -1;
     }
@@ -154,7 +154,7 @@ int sfs_delete(char* pathname) {
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (!traverse(&blockID, path)) {
+    if (traverse(&blockID, path)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -2;
     }
@@ -166,6 +166,7 @@ int sfs_delete(char* pathname) {
 }
 
 /* sfs_create: Creates a file.
+ * special thanks: http://cboard.cprogramming.com/c-programming/67987-passing-2d-array-reference.html#post483081
  *
  * @pathname    String      a path to a file.
  * @type        Integer     type of file.
@@ -180,18 +181,26 @@ int sfs_delete(char* pathname) {
  * return -5:               error creating file
  */
 int sfs_create(char* pathname, int type) {
-    char path[MAX_PATH][MAX_DIRNAME];
+    char** path = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH; i++) {
+        path[i] = malloc(MAX_DIRNAME);
+    }
 
     // Parse the pathname
-    if (!parsePath(path, pathname)) {
+    if (parsePath(path, pathname)) {
         fprintf(stderr, "Error parsing the path.\n");
         return -1;
     }
 
-    char parent[MAX_PATH - 1][MAX_DIRNAME];
+    char** parent = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH - 1; i++) {
+        parent[i] = malloc(MAX_DIRNAME);
+    }
 
     // Find the parent directory
-    if (!dirname(&parent, path)) {
+    if (dirname(parent, path)) {
         fprintf(stderr, "Error finding the parent directory of the file.\n");
         return -2;
     }
@@ -199,18 +208,18 @@ int sfs_create(char* pathname, int type) {
     int blockID;
 
     // Traverse the file system for blockID of the directory containing the component
-    if (!traverse(&blockID, parent)) {
+    if (traverse(&blockID, parent)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
 
     if (type == 1) {
-        if (!createFCB(blockID, path[LENGTH(path) - 1])) {
+        if (createFCB(blockID, path[arrayLen(path) - 1])) {
             fprintf(stderr, "Error creating the file control block.\n");
             return -4;
         }
     } else if (type == 0) {
-        if (!createFile(blockID, path[LENGTH(path) - 1])) {
+        if (createFile(blockID, path[arrayLen(path) - 1])) {
             fprintf(stderr, "Error creating file.\n");
             return -5;
         }
@@ -233,7 +242,7 @@ int sfs_getsize(char* pathname) {
     char path[MAX_PATH][MAX_DIRNAME];
 
     // Parse the pathname
-    if (!parsePath(path, pathname)) {
+    if (parsePath(path, pathname)) {
         fprintf(stderr, "Error parsing the path.\n");
         return -1;
     }
@@ -241,7 +250,7 @@ int sfs_getsize(char* pathname) {
     char parent[MAX_PATH - 1][MAX_DIRNAME];
 
     // Find the parent directory
-    if (!dirname(&parent, path)) {
+    if (dirname(parent, path)) {
         fprintf(stderr, "Error finding the parent directory of the file.\n");
         return -2;
     }
@@ -249,14 +258,14 @@ int sfs_getsize(char* pathname) {
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (!traverse(&blockID, parent)) {
+    if (traverse(&blockID, parent)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
 
     int size;
 
-    if (!getSize(&size, blockID, path[LENGTH(path) - 1])) {
+    if (getSize(&size, blockID, path[arrayLen(path) - 1])) {
         fprintf(stderr, "Error getting file size.\n");
         return -4;
     }
@@ -279,7 +288,7 @@ int sfs_gettype(char* pathname) {
     char path[MAX_PATH][MAX_DIRNAME];
 
     // Parse the pathname
-    if (!parsePath(path, pathname)) {
+    if (parsePath(path, pathname)) {
         fprintf(stderr, "Error parsing the path.\n");
         return -1;
     }
@@ -287,7 +296,7 @@ int sfs_gettype(char* pathname) {
     char parent[MAX_PATH - 1][MAX_DIRNAME];
 
     // Find the parent directory
-    if (!dirname(&parent, path)) {
+    if (dirname(parent, path)) {
         fprintf(stderr, "Error finding the parent directory of the file.\n");
         return -2;
     }
@@ -295,7 +304,7 @@ int sfs_gettype(char* pathname) {
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (!traverse(&blockID, parent)) {
+    if (traverse(&blockID, parent)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
@@ -303,7 +312,7 @@ int sfs_gettype(char* pathname) {
     int type;
 
     // Get the file type of the file component
-    if (!getType(&type, blockID, path[LENGTH(path) - 1])) {
+    if (getType(&type, blockID, path[arrayLen(path) - 1])) {
         fprintf(stderr, "Error getting the file type.\n");
         return -4;
     }
@@ -321,6 +330,7 @@ int sfs_gettype(char* pathname) {
 int sfs_initialize(int erase) {
     if (erase == 1) {
         char* empty = malloc(BLOCK_SIZE);
+        empty[0] = FREE_BLOCK;
 
         for (int i = 0; i < BLOCKS; i++) {
             put_block(i, empty);
