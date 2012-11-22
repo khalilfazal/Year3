@@ -5,93 +5,129 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "blockio.h"
 #include "fControl.h"
 #include "fileSystem.h"
 #include "pathUtils.h"
+#include "entry.h"
 
 /*
- * createFCB: Creates a file control block.
+ * createRoot: Creates the root directory.
  *
- * @parentFCB   Integer         the parent file control block
- * @name        String          name of the file control block
- *
- * return  0:                   successful execution
- * return -1:                   error in creating root directory
+ * return  0:       successful execution
+ * return -1:       error retrieving the free block
+ * return -2:       error creating file block
  */
-int createFCB(int parentFCB, char* name) {
-    if (parentFCB == ROOT_BLOCK && name == "") {
-        if (!createRoot()) {
-            fprintf(stderr, "Error in creating root directory");
-            return -1;
-        }
+int createRoot() {
+    char* block = malloc(BLOCK_SIZE);
+
+    if (get_block(ROOT_BLOCKID, block)) {
+        fprintf(stderr, "Error retrieving the free block.\n");
+        return -1;
+    }
+
+    block[0] = DIRECTORY;
+    block[1] = ROOT[0];
+    block[ENTRY_START] = ENTRY_END;
+
+    if (put_block(ROOT_BLOCKID, block)) {
+        fprintf(stderr, "Error creating file block.\n");
+        return -2;
     }
 
     return 0;
 }
 
 /*
- * createRoot: Creates the root directory.
+ * createFCB: Creates a file control block.
  *
- * return 0:    successful execution
+ * precondition: length of name is of valid length
+ *
+ * @parentFCBID     Integer         the parent file control block
+ * @name            String          name of the file control block
+ *
+ * return  0:                       successful execution
+ * return -1:                       error in creating root directory
+ * return -2:                       error retrieving the parent file control block
+ * return -3:                       error adding entry to file control block
+ * return -4:                       error retrieving the free block
+ * return -5:                       error creating file block
  */
-int createRoot() {
+int createFCB(int parentFCBID, char* name) {
+    if (parentFCBID == ROOT_BLOCKID && !strcmp(name, ROOT)) {
+        if (createRoot()) {
+            fprintf(stderr, "Error in creating root directory.\n");
+            return -1;
+        }
+
+        return 0;
+    }
+    int startingBlockID;
+
+    if (addEntry(&startingBlockID, parentFCBID, name, 1)) {
+        fprintf(stderr, "Error adding entry to file control block.\n");
+        return -3;
+    }
+
+    char* block = malloc(BLOCK_SIZE);
+
+    if (get_block(startingBlockID, block)) {
+        fprintf(stderr, "Error retrieving the free block.\n");
+        return -4;
+    }
+
+    block[0] = DIRECTORY;
+
+    for (int i = 0; i < strlen(name); i++) {
+        block[i + 1] = name[i];
+    }
+
+    block[ENTRY_START] = ENTRY_END;
+
+    if (put_block(startingBlockID, block)) {
+        fprintf(stderr, "Error creating file block.\n");
+        return -5;
+    }
+
     return 0;
 }
 
 /*
  * createFile: Creates a file.
  *
- * @parentFCB   Integer         the parent file control block
- * @name        String          name of the file
+ * precondition: length of name is of valid length
  *
- * return 0:                    successful execution
+ * @fcBlockID   Integer     the parent file control block
+ * @name        String      name of the file
+ *
+ * return  0:               successful execution
+ * return -1:               error adding entry to file control block
+ * return -2:               error retrieving the free block
+ * return -3:               error creating file block
  */
-int createFile(int parentFCB, char* name) {
-    return 0;
-}
+int createFile(int fcBlockID, char* name) {
+    int startingBlockID;
 
-/*
- * getType: Get file type of a file from the file control block
- *
- * @type        Integer Pointer     file type
- * @fcBlock     Integer             location of the file control block
- *
- * return 0:                        successful execution
- */
-int getType(int* type, int fcBlock, char* name) {
-    return 0;
-}
-
-/*
- * getStart: Get the starting block of the file path component from the file control block.
- *
- * @block       Integer Pointer     starting block id of the file component
- * @fcBlock     Integer             the file control block id
- * @name        String              the file component
- *
- * return 0:                        successful execution
- * return 1:                        error retrieving the file control block
- */
-int getStart(int* blockID, int fcBlockID, char* name) {
-    char* fcBlock = malloc(BLOCK_SIZE);
-
-    if (!get_block(fcBlockID, fcBlock)) {
-        fprintf(stderr, "Error retrieving the file control block.\n");
-        return 1;
+    if (addEntry(&startingBlockID, fcBlockID, name, 0)) {
+        fprintf(stderr, "Error adding entry to file control block.\n");
+        return -1;
     }
 
-    return 0;
-}
+    char* block = malloc(BLOCK_SIZE);
 
-/*
- * getSize: Get file size of a file from the file control block.
- *
- * @size      Integer Pointer       file size
- * @fcBlock   Integer               location of the file control block
- *
- * return 0:                        successful execution
- */
-int getSize(int* size, int fcBlock, char* name) {
+    if (get_block(startingBlockID, block)) {
+        fprintf(stderr, "Error retrieving the free block.\n");
+        return -2;
+    }
+
+    block[0] = FILE;
+    block[1] = END_BLOCK;
+
+    if (put_block(startingBlockID, block)) {
+        fprintf(stderr, "Error creating file block.\n");
+        return -3;
+    }
+
     return 0;
 }

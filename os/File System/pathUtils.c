@@ -49,6 +49,12 @@ int parsePath(char** path, char* pathname) {
     // Current position in file's name
     int filePos = 0;
 
+    // Add root to the path
+    path[level][filePos++] = '/';
+    path[level++][filePos] = '\0';
+
+    filePos = 0;
+
     // Loop through each char in the pathname, starting from the second char.
     for (int i = 1; i < strlen(pathname); i++) {
 
@@ -56,10 +62,7 @@ int parsePath(char** path, char* pathname) {
         if (pathname[i] == '/') {
 
             // End the string with a null char.
-            path[level][filePos] = '\0';
-
-            // Increment the level.
-            level++;
+            path[level++][filePos] = '\0';
 
             // Reset the current index of the file name.
             filePos = 0;
@@ -72,13 +75,15 @@ int parsePath(char** path, char* pathname) {
             }
 
             // Add the current char to current file's name.
-            path[level][filePos] = pathname[i];
-
-            // Increment the position in the file name.
-            filePos++;
+            path[level][filePos++] = pathname[i];
         }
     }
 
+    if (filePos > 0) {
+        level++;
+    }
+
+    path[level][0] = '\0';
     return 0;
 }
 
@@ -96,25 +101,25 @@ int parsePath(char** path, char* pathname) {
 int traverse(int* blockID, char** path) {
 
     // Start traversing from the root block.
-    blockID = ROOT_BLOCK;
+    *blockID = ROOT_BLOCKID;
 
-    for (int i = 0; i < LENGTH(path); i++) {
+    for (int i = 1; i < arrayLen(path); i++) {
         int type;
 
         // Get the file type of the file component
-        if(!getType(type, blockID, path[i])) {
-            fprintf("Error getting the file type.\n");
+        if (getType(type, blockID, path[i])) {
+            fprintf(stderr, "Error getting the file type.\n");
             return -1;
         }
 
         // If a component in the middle of a path is not a directory
-        if (type == 0 && i < LENGTH(path) - 1) {
-            fprintf("Error in interpreting a regular file as a directory.\n");
+        if (type == 0 && i < arrayLen(path) - 1) {
+            fprintf(stderr, "Error in interpreting a regular file as a directory.\n");
             return -2;
         }
 
         // If the file control block can not be read for path[i].
-        if (!getStart(&blockID, blockID, path[i])) {
+        if (getStart(blockID, blockID, path[i])) {
             fprintf(stderr, "Error retrieving ./%s from the file control block of ", path[i]);
 
             if (i > 0) {
@@ -135,17 +140,40 @@ int traverse(int* blockID, char** path) {
  * dirname: Strip last component from file name.
  * The parent directory of the root directory is the root directory
  *
- * @dir     String      the path to the parent directory of a file component
- * @path    String      the path to a file component
+ * @dir     Array of Strings      the path to the parent directory of a file component
+ * @path    Array of Strings      the path to a file component
  */
 int dirname(char** dir, char** path) {
-    if (LENGTH(path) == 0) {
-        dir = path;
+    int length = arrayLen(path);
+
+    if (length == 1) {
+        *dir = *path;
+        dir[length][0] = '\0';
     } else {
-        for (int i = 0; i < LENGTH(path) - 1; i++) {
+        for (int i = 0; i < length - 1; i++) {
             dir[i] = path[i];
         }
+
+        dir[length - 1][0] = '\0';
     }
 
     return 0;
+}
+
+/*
+ * arrayLen: Finds the length of an array terminated with a null char.
+ * special thanks: http://stackoverflow.com/a/232882
+ *
+ * @array       Array of Strings    the array of unknown length
+ * return int:  Integer             the length of the array
+ */
+int arrayLen(char** array) {
+    int output = 0;
+    int i = 0;
+
+    while (array[i++][0] != '\0') {
+        output++;
+    }
+
+    return output;
 }

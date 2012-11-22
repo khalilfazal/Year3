@@ -44,7 +44,8 @@ int delete(int fd) {
     } else {
         //Picks the vertex
         for (int i = fd; i < openTable.length; i++) {
-            *openTable.fd[i] = *openTable.fd[i + 1];
+            openTable.fd[i][0] = openTable.fd[i + 1][0];
+            openTable.fd[i][1] = openTable.fd[i + 1][1];
         }
         openTable.length--;
     }
@@ -66,7 +67,8 @@ int add(int* fd, int blockID) {
     for (int i = 1; i < openTable.length; i++) {
         //These two lines move everything 'up' (to the right)
         //It starts from the first
-        *openTable.fd[i + 1] = *openTable.fd[i];
+        openTable.fd[i + 1][0] = openTable.fd[i][0];
+        openTable.fd[i + 1][1] = openTable.fd[i][1];
     }
 
     openTable.fd[0][0] = openTable.fd[1][0] + 1;
