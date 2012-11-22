@@ -3,10 +3,14 @@
  *
  */
 
-#define START 3
-#define ENTRY_START 7
+#define BLOCK_START 0
+#define ENTRY_START 1
 #define ENTRY_LENGTH 9
 #define ENTRY_END -1
+
+#define TYPE_P 0
+#define NAME_P 1
+#define START_P 7
 
 // Adds an entry to a fcb
 int addEntry(int* start, int* fcBlockID, char* name, int type);

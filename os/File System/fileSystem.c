@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "blockio.h"
+#include "entry.h"
 #include "fControl.h"
 #include "fileSystem.h"
 #include "openFiles.h"
@@ -21,7 +22,11 @@
  * return -3:               error adding block id to the file open table
  */
 int sfs_open(char* pathname) {
-    char path[MAX_PATH][MAX_DIRNAME];
+    char** path = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH; i++) {
+        path[i] = malloc(MAX_DIRNAME);
+    }
 
     // Parse the pathname
     if (parsePath(path, pathname)) {
@@ -143,7 +148,11 @@ int sfs_close(int fd) {
  * return -2:               error traversing the file system
  */
 int sfs_delete(char* pathname) {
-    char path[MAX_PATH][MAX_DIRNAME];
+    char** path = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH; i++) {
+        path[i] = malloc(MAX_DIRNAME);
+    }
 
     // Parse the pathname
     if (parsePath(path, pathname)) {
@@ -239,7 +248,11 @@ int sfs_create(char* pathname, int type) {
  * return           -4:     error getting file size
  */
 int sfs_getsize(char* pathname) {
-    char path[MAX_PATH][MAX_DIRNAME];
+    char** path = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH; i++) {
+        path[i] = malloc(MAX_DIRNAME);
+    }
 
     // Parse the pathname
     if (parsePath(path, pathname)) {
@@ -247,7 +260,11 @@ int sfs_getsize(char* pathname) {
         return -1;
     }
 
-    char parent[MAX_PATH - 1][MAX_DIRNAME];
+    char** parent = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH - 1; i++) {
+        parent[i] = malloc(MAX_DIRNAME);
+    }
 
     // Find the parent directory
     if (dirname(parent, path)) {
@@ -285,7 +302,11 @@ int sfs_getsize(char* pathname) {
  * return -4:               error getting the file type
  */
 int sfs_gettype(char* pathname) {
-    char path[MAX_PATH][MAX_DIRNAME];
+    char** path = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH; i++) {
+        path[i] = malloc(MAX_DIRNAME);
+    }
 
     // Parse the pathname
     if (parsePath(path, pathname)) {
@@ -293,7 +314,11 @@ int sfs_gettype(char* pathname) {
         return -1;
     }
 
-    char parent[MAX_PATH - 1][MAX_DIRNAME];
+    char** parent = malloc(MAX_PATH);
+
+    for (int i = 0; i < MAX_PATH - 1; i++) {
+        parent[i] = malloc(MAX_DIRNAME);
+    }
 
     // Find the parent directory
     if (dirname(parent, path)) {

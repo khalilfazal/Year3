@@ -4,6 +4,9 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "blockio.h"
 #include "entry.h"
 #include "fControl.h"
 #include "fileSystem.h"
@@ -142,22 +145,37 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
  * @type        Integer Pointer     file type
  * @fcBlockID   Integer             location of the file control block
  *
- * return 0:                        successful execution
+ * return  0:                       successful execution
  * return -1:                       error retrieving the file control block
+ * return -2:                       error finding entry in the file control block
  */
 int getType(int* type, int fcBlockID, char* name) {
-    char* fcb = malloc(BLOCK_SIZE);
+    if (fcBlockID == ROOT_BLOCKID && !strcmp(name, ROOT)) {
+        *type = DIRECTORY;
+        return 0;
+    } else {
+        char* fcb = malloc(BLOCK_SIZE);
 
-    if (get_block(fcBlockID, fcb)) {
-        fprintf(stderr, "Error retrieving the file control block.\n");
-        return -1;
+        if (get_block(fcBlockID, fcb)) {
+            fprintf(stderr, "Error retrieving the file control block.\n");
+            return -1;
+        }
+
+        for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
+            char* line = &fcb[i];
+            char entryName[MAX_DIRNAME - 1];
+            strncpy(entryName, &line[NAME_P], MAX_DIRNAME - 1);
+            entryName[MAX_DIRNAME - 1] = '\0';
+
+            if (!strcmp(entryName, name)) {
+                *type = line[TYPE_P];
+                return 0;
+            }
+        }
     }
 
-    for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
-
-    }
-
-    return 0;
+    fprintf(stderr, "Error finding entry in the file control block.\n");
+    return -2;
 }
 
 /*
@@ -171,16 +189,33 @@ int getType(int* type, int fcBlockID, char* name) {
  *
  * return  0:                       successful execution
  * return -1:                       error retrieving the file control block
+ * return -2:                       error finding entry in the file control block
  */
 int getStart(int* blockID, int fcBlockID, char* name) {
-    char* fcBlock = malloc(BLOCK_SIZE);
+    char* fcb = malloc(BLOCK_SIZE);
 
-    if (get_block(fcBlockID, fcBlock)) {
+    if (get_block(fcBlockID, fcb)) {
         fprintf(stderr, "Error retrieving the file control block.\n");
         return -1;
     }
 
-    return 0;
+    for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
+        char* line = &fcb[i];
+        char entryName[MAX_DIRNAME - 1];
+        strncpy(entryName, &line[NAME_P], MAX_DIRNAME - 1);
+        entryName[MAX_DIRNAME - 1] = '\0';
+
+        if (!strcmp(entryName, name)) {
+            char start[2];
+            start[0] = line[START_P];
+            start[1] = line[START_P + 1];
+
+            *blockID = decode_int(start);
+            return 0;
+        }
+    }
+
+    return -2;
 }
 
 /*

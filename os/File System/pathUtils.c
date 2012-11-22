@@ -79,6 +79,8 @@ int parsePath(char** path, char* pathname) {
         }
     }
 
+    path[level][filePos] = '\0';
+
     if (filePos > 0) {
         level++;
     }
@@ -107,7 +109,7 @@ int traverse(int* blockID, char** path) {
         int type;
 
         // Get the file type of the file component
-        if (getType(type, blockID, path[i])) {
+        if (getType(&type, *blockID, path[i])) {
             fprintf(stderr, "Error getting the file type.\n");
             return -1;
         }
@@ -118,8 +120,7 @@ int traverse(int* blockID, char** path) {
             return -2;
         }
 
-        // If the file control block can not be read for path[i].
-        if (getStart(blockID, blockID, path[i])) {
+        if (getStart(blockID, *blockID, path[i])) {
             fprintf(stderr, "Error retrieving ./%s from the file control block of ", path[i]);
 
             if (i > 0) {
