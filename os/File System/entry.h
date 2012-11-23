@@ -11,12 +11,16 @@
 #define TYPE_P 0
 #define NAME_P 1
 #define START_P 7
+#define DATA_P 3
+
+// Find a free block in the file system
+int getFreeBlock(int* blockID);
 
 // Adds an entry to a fcb
-int addEntry(int* start, int* fcBlockID, char* name, int type);
+int addEntry(int* start, int fcBlockID, char* name, int type);
 
 // Removes an entry from a fcb
-int removeEntry(int* start, int* fcBlockID, char* name);
+int removeEntry(int* start, int fcBlockID, char* name);
 
 // Get file type of a file from the file control block
 int getType(int* type, int fcBlockID, char* name);
@@ -25,4 +29,4 @@ int getType(int* type, int fcBlockID, char* name);
 int getStart(int* blockID, int fcBlockID, char* name);
 
 // Get file size of a regular file
-int getSize(int* size, int fcb);
+int getSize(int* size, int blockID);

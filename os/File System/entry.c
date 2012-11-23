@@ -65,17 +65,18 @@ int getEntryPoint(int* position, char* fcb) {
  * addEntry: Adds an entry to a fcb.
  *
  * @start:      Integer Pointer     location of the starting block
- * @fcBlockID:  Integer Pointer     the target fcb id
+ * @fcBlockID:  Integer             the target fcb id
  * @name:       String              name of the entry
  * @type:       Integer             type of the entry
  *
  * return  0:                       successful execution
- * return -1:                       error retrieving the parent file control block
- * return -2:                       error looking for a free block
- * return -3:                       error finding entry in the file control block
- * return -4:                       error creating file control block
+ * return -1:                       file already exists in directory
+ * return -2:                       error retrieving the parent file control block
+ * return -3:                       error looking for a free block
+ * return -4:                       error finding entry in the file control block
+ * return -5:                       error creating file control block
  */
-int addEntry(int* start, int* fcBlockID, char* name, int type) {
+int addEntry(int* start, int fcBlockID, char* name, int type) {
     /* best case:
      *      block: [1, a, b, c, d, e, f, ... ]
      * average case:
@@ -86,16 +87,21 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
      * Therefore, 7 chars must be skipped before any useful data is reached.
      */
 
+    if (getStart(malloc(1), fcBlockID, name) != -2) {
+        fprintf(stderr, "File already exists in directory.\n");
+        return -1;
+    }
+
     char* fcb = malloc(BLOCK_SIZE);
 
     if (get_block(fcBlockID, fcb)) {
         fprintf(stderr, "Error retrieving the parent file control block.\n");
-        return -1;
+        return -2;
     }
 
     if (getFreeBlock(start)) {
         fprintf(stderr, "Error looking for a free block.\n");
-        return -2;
+        return -3;
     }
 
     // Position in the file control block
@@ -103,7 +109,7 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
 
     if (getEntryPoint(&position, fcb)) {
         fprintf(stderr, "Error finding entry in the file control block.\n");
-        return -3;
+        return -4;
     }
 
     /*
@@ -133,7 +139,7 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
 
     if (put_block(fcBlockID, fcb)) {
         fprintf(stderr, "Error creating file control block.\n");
-        return -4;
+        return -5;
     }
 
     return 0;
@@ -143,7 +149,7 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
  * removeEntry: Removes an entry from a fcb.
  *
  * @start:      Integer Pointer     location of the starting block
- * @fcBlockID:  Integer Pointer     the target fcb id
+ * @fcBlockID:  Integer             the target fcb id
  * @name:       String              name of the entry
  *
  * return  0:                       successful execution
@@ -151,7 +157,7 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
  * return -2:                       error finding entry in the file control block
  * return -3:                       error creating file control block
  */
-int removeEntry(int* start, int* fcBlockID, char* name) {
+int removeEntry(int* start, int fcBlockID, char* name) {
     char* fcb = malloc(BLOCK_SIZE);
 
     if (get_block(fcBlockID, fcb)) {
@@ -282,11 +288,35 @@ int getStart(int* blockID, int fcBlockID, char* name) {
  *
  * precondition: length of name is of valid length
  *
- * @size    Integer Pointer     file size
- * @fcb     Integer             location of the starting block of a file
+ * @size      Integer Pointer   file size
+ * @blockID   Integer           location of the starting block of a file
  *
- * return 0:                    successful execution
+ * return  0:                   successful execution
+ * return -1:                   error retrieving the file control block
  */
-int getSize(int* size, int fcb) {
+int getSize(int* size, int blockID) {
+    *size = 0;
+    char* block;
+    char next[2];
+
+    do {
+        block = malloc(BLOCK_SIZE);
+
+        if (get_block(blockID, block)) {
+            fprintf(stderr, "Error retrieving the file control block.\n");
+            return -1;
+        }
+
+        next[0] = block[NEXT_BLOCK];
+        next[1] = block[NEXT_BLOCK + 1];
+
+        blockID = decode_int(next);
+    } while (blockID != BLOCK_END && (*size += BLOCK_SIZE - 3));
+
+    int p = DATA_P;
+
+    while (block[p++] != '\0' && ((*size)++)) {
+    }
+
     return 0;
 }

@@ -64,14 +64,24 @@ int sfs_open(char* pathname) {
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
+ * return -2:                   error reading file
  */
 int sfs_read(int fd, int start, int length, char* mem_pointer) {
     int blockID;
+
+    for (int i = 0; i < MAX_IO_LENGTH + 1; i++) {
+        mem_pointer[i] = '\0';
+    }
 
     // Find the block id corresponding to the file descriptor from the file open table
     if (find(&blockID, fd)) {
         fprintf(stderr, "Error finding opened block id from the file open table.\n");
         return -1;
+    }
+
+    if (readFile(blockID, start, length, mem_pointer)) {
+        fprintf(stderr, "Error reading file.\n");
+        return -2;
     }
 
     return 1;
@@ -87,6 +97,7 @@ int sfs_read(int fd, int start, int length, char* mem_pointer) {
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
+ * return -2:                   error writing file
  */
 int sfs_write(int fd, int start, int length, char* mem_pointer) {
     int blockID;
@@ -95,6 +106,11 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
     if (find(&blockID, fd)) {
         fprintf(stderr, "Error finding opened block id from the file open table.\n");
         return -1;
+    }
+
+    if (writeFile(blockID, start, length, mem_pointer)) {
+        fprintf(stderr, "Error writing file.\n");
+        return -2;
     }
 
     return 1;
@@ -130,22 +146,22 @@ int sfs_readdir(int fd, char* mem_pointer) {
         return -2;
     }
 
-    int i = ENTRY_START;
-    int p = 0;
+    int final, p = 0;
 
-    while (block[i] != ENTRY_END) {
-        for (int j = i + NAME_P; j < i + ENTRY_LENGTH - 2; j++) {
-            if (block[j] != '\0') {
-                mem_pointer[p++] = block[j];
+    for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
+        if (block[i] != ENTRY_END) {
+            for (int j = i + NAME_P; j < i + MAX_DIRNAME; j++) {
+                if (block[j] != '\0') {
+                    mem_pointer[p++] = block[j];
+                    final = p;
+                }
             }
+
+            mem_pointer[p++] = ' ';
         }
-
-        mem_pointer[p++] = ' ';
-
-        i += ENTRY_LENGTH;
     }
 
-    mem_pointer[p - 1] = '\0';
+    mem_pointer[final] = '\0';
 
     return 1;
 }

@@ -7,8 +7,6 @@
 #define MAX_DIRNAME 7
 #define ROOT_BLOCKID 0
 
-#define LENGTH(x) sizeof(x)/sizeof(*x)
-
 // Parses a path string into an array of path components.
 int parsePath(char** path, char* pathname);
 
