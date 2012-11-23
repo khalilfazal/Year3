@@ -3,8 +3,9 @@
  *
  */
 
-#define BLOCKS 512
-#define BLOCK_SIZE 128
+#define BLOCKS          512
+#define BLOCK_SIZE      128
+#define MAX_IO_LENGTH   1024
 
 // Opens a file descriptor to the file.
 int sfs_open(char* pathname);

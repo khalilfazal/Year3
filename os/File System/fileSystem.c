@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "blockio.h"
 #include "entry.h"
 #include "fControl.h"
@@ -16,7 +17,7 @@
  *
  * @pathname    String      a path to a file.
  *
- * return  1:               successful execution
+ * return  fd (>= 0):       successful execution
  * return -1:               error parsing the path
  * return -2:               error traversing the file system
  * return -3:               error adding block id to the file open table
@@ -50,7 +51,7 @@ int sfs_open(char* pathname) {
         return -3;
     }
 
-    return 1;
+    return fd;
 }
 
 /*
@@ -107,15 +108,44 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
+ * return -2:                   error retrieving file block
  */
 int sfs_readdir(int fd, char* mem_pointer) {
     int blockID;
+
+    for (int i = 0; i < MAX_IO_LENGTH + 1; i++) {
+        mem_pointer[i] = '\0';
+    }
 
     // Find the block id corresponding to the file descriptor from the file open table
     if (find(&blockID, fd)) {
         fprintf(stderr, "Error finding opened block id from the file open table.\n");
         return -1;
     }
+
+    char* block = malloc(BLOCK_SIZE);
+
+    if (get_block(blockID, block)) {
+        fprintf(stderr, "Error retrieving file block.\n");
+        return -2;
+    }
+
+    int i = ENTRY_START;
+    int p = 0;
+
+    while (block[i] != ENTRY_END) {
+        for (int j = i + NAME_P; j < i + ENTRY_LENGTH - 2; j++) {
+            if (block[j] != '\0') {
+                mem_pointer[p++] = block[j];
+            }
+        }
+
+        mem_pointer[p++] = ' ';
+
+        i += ENTRY_LENGTH;
+    }
+
+    mem_pointer[p - 1] = '\0';
 
     return 1;
 }
@@ -145,7 +175,11 @@ int sfs_close(int fd) {
  *
  * return  1:               successful execution
  * return -1:               error parsing the path
- * return -2:               error traversing the file system
+ * return -2:               error finding the parent directory of the file
+ * return -3:               error traversing the file system
+ * return -4:               error getting the file type
+ * return -5:               error deleting directory
+ * return -6:               error deleting file
  */
 int sfs_delete(char* pathname) {
     char** path = malloc(MAX_PATH);
@@ -160,16 +194,45 @@ int sfs_delete(char* pathname) {
         return -1;
     }
 
-    int blockID;
+    char** parent = malloc(MAX_PATH);
 
-    // Traverse the file system for blockID of the last component
-    if (traverse(&blockID, path)) {
-        fprintf(stderr, "Error traversing the file system.\n");
+    for (int i = 0; i < MAX_PATH - 1; i++) {
+        parent[i] = malloc(MAX_DIRNAME);
+    }
+
+    // Find the parent directory
+    if (dirname(parent, path)) {
+        fprintf(stderr, "Error finding the parent directory of the file.\n");
         return -2;
     }
 
-    // Remove all open files referencing the deleted file from the file open table
-    deleteAll(blockID);
+    int blockID;
+
+    // Traverse the file system for blockID of the last component
+    if (traverse(&blockID, parent)) {
+        fprintf(stderr, "Error traversing the file system.\n");
+        return -3;
+    }
+
+    int type;
+
+    // Get the file type of the file component
+    if (getType(&type, blockID, path[arrayLen(path) - 1])) {
+        fprintf(stderr, "Error getting the file type.\n");
+        return -4;
+    }
+
+    if (type == 1) {
+        if (deleteDir(blockID, path[arrayLen(path) - 1])) {
+            fprintf(stderr, "Error deleting directory.\n");
+            return -5;
+        }
+    } else if (type == 0) {
+        if (deleteFile(blockID, path[arrayLen(path) - 1])) {
+            fprintf(stderr, "Error deleting file.\n");
+            return -6;
+        }
+    }
 
     return 1;
 }
@@ -260,29 +323,17 @@ int sfs_getsize(char* pathname) {
         return -1;
     }
 
-    char** parent = malloc(MAX_PATH);
-
-    for (int i = 0; i < MAX_PATH - 1; i++) {
-        parent[i] = malloc(MAX_DIRNAME);
-    }
-
-    // Find the parent directory
-    if (dirname(parent, path)) {
-        fprintf(stderr, "Error finding the parent directory of the file.\n");
-        return -2;
-    }
-
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (traverse(&blockID, parent)) {
+    if (traverse(&blockID, path)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
 
     int size;
 
-    if (getSize(&size, blockID, path[arrayLen(path) - 1])) {
+    if (getSize(&size, blockID)) {
         fprintf(stderr, "Error getting file size.\n");
         return -4;
     }
@@ -355,7 +406,7 @@ int sfs_gettype(char* pathname) {
 int sfs_initialize(int erase) {
     if (erase == 1) {
         char* empty = malloc(BLOCK_SIZE);
-        empty[0] = FREE_BLOCK;
+        empty[0] = FREE;
 
         for (int i = 0; i < BLOCKS; i++) {
             put_block(i, empty);

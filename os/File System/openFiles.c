@@ -4,6 +4,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "openFiles.h"
 
 /*
@@ -17,8 +18,8 @@
  */
 int find(int* blockID, int fd) {
     for (int i = 0; i < openTable.length; i++) {
-        if (openTable.fd[i][0] == fd) {
-            *blockID = i;
+        if (openTable.fd[i][0] == fd + 1) {
+            *blockID = openTable.fd[i][1];
             return 0;
         }
     }
@@ -30,27 +31,30 @@ int find(int* blockID, int fd) {
 /*
  * delete: Deletes the entry in the priority queue corresponding to the file descriptor.
  *
- * @fd          Integer             the file descriptor
+ * @fd          Integer     the file descriptor
  *
- * return 0:                        successful execution
- * return 1:                        file descriptor does not exist in the priority queue
+ * return  0:               successful execution
+ * return -1:               file descriptor is less than zero
+ * return -2:               error finding file descriptor
  */
 int delete(int fd) {
-    if (fd == openTable.length - 1) {
-        openTable.fd[fd][0] = 0;
-    } else if (fd > (openTable.length - 1) || (fd < 0)) {
-        fprintf(stderr, "File descriptor does not exist in the priority queue.\n");
-        return 1;
-    } else {
-        //Picks the vertex
-        for (int i = fd; i < openTable.length; i++) {
-            openTable.fd[i][0] = openTable.fd[i + 1][0];
-            openTable.fd[i][1] = openTable.fd[i + 1][1];
-        }
-        openTable.length--;
+    if (fd < 0) {
+        fprintf(stderr, "File descriptor is less than zero.\n");
+        return -1;
     }
 
-    return 0; //This means it successfully deleted whatever index you wanted deleted
+    for (int i = 0; i < openTable.length; i++) {
+        if (openTable.fd[i][0] == fd + 1) {
+            for (int j = i; j < openTable.length; j++) {
+                memcpy(openTable.fd[j], openTable.fd[j + 1], 2);
+            }
+
+            return 0;
+        }
+    }
+
+    fprintf(stderr, "Error finding file descriptor.\n");
+    return -2;
 }
 
 /*
@@ -64,17 +68,14 @@ int delete(int fd) {
 int add(int* fd, int blockID) {
     openTable.length++;
 
-    for (int i = 1; i < openTable.length; i++) {
-        //These two lines move everything 'up' (to the right)
-        //It starts from the first
-        openTable.fd[i + 1][0] = openTable.fd[i][0];
-        openTable.fd[i + 1][1] = openTable.fd[i][1];
+    for (int i = openTable.length - 2; i > -1; i--) {
+        memcpy(openTable.fd[i + 1], openTable.fd[i], 2);
     }
 
     openTable.fd[0][0] = openTable.fd[1][0] + 1;
     openTable.fd[0][1] = blockID;
 
-    *fd = openTable.fd[0][0];
+    *fd = openTable.fd[0][0] - 1;
 
     return 0;
 }

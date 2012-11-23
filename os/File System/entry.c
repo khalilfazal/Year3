@@ -31,7 +31,7 @@ int getFreeBlock(int* blockID) {
             return -2;
         }
 
-        if (block[0] == FREE_BLOCK) {
+        if (block[0] == FREE) {
             *blockID = i;
             return 0;
         }
@@ -72,8 +72,8 @@ int getEntryPoint(int* position, char* fcb) {
  * return  0:                       successful execution
  * return -1:                       error retrieving the parent file control block
  * return -2:                       error looking for a free block
- * return -3:                       error looking for entry point the file control block
- * return -4:                       error creating file block
+ * return -3:                       error finding entry in the file control block
+ * return -4:                       error creating file control block
  */
 int addEntry(int* start, int* fcBlockID, char* name, int type) {
     /* best case:
@@ -102,7 +102,7 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
     int position;
 
     if (getEntryPoint(&position, fcb)) {
-        fprintf(stderr, "Error finding entry point in the file control block.\n");
+        fprintf(stderr, "Error finding entry in the file control block.\n");
         return -3;
     }
 
@@ -127,14 +127,68 @@ int addEntry(int* start, int* fcBlockID, char* name, int type) {
 
     position += START;
 
-    fcb[position] = ENTRY_END;
+    if (fcb[position + 1] == '\0') {
+        fcb[position] = ENTRY_END;
+    }
 
     if (put_block(fcBlockID, fcb)) {
-        fprintf(stderr, "Error creating file block.\n");
+        fprintf(stderr, "Error creating file control block.\n");
         return -4;
     }
 
     return 0;
+}
+
+/*
+ * removeEntry: Removes an entry from a fcb.
+ *
+ * @start:      Integer Pointer     location of the starting block
+ * @fcBlockID:  Integer Pointer     the target fcb id
+ * @name:       String              name of the entry
+ *
+ * return  0:                       successful execution
+ * return -1:                       error retrieving the parent file control block
+ * return -2:                       error finding entry in the file control block
+ * return -3:                       error creating file control block
+ */
+int removeEntry(int* start, int* fcBlockID, char* name) {
+    char* fcb = malloc(BLOCK_SIZE);
+
+    if (get_block(fcBlockID, fcb)) {
+        fprintf(stderr, "Error retrieving the parent file control block.\n");
+        return -1;
+    }
+
+    for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
+        char* line = &fcb[i];
+        char entryName[MAX_DIRNAME - 1];
+        strncpy(entryName, &line[NAME_P], MAX_DIRNAME - 1);
+        entryName[MAX_DIRNAME - 1] = '\0';
+
+        if (!strcmp(entryName, name)) {
+            char _start[2];
+            _start[0] = line[START_P];
+            _start[1] = line[START_P + 1];
+
+            *start = decode_int(_start);
+
+            fcb[i] = ENTRY_END;
+
+            for (int j = i + 1; j < i + ENTRY_LENGTH + 1; j++) {
+                fcb[j] = '\0';
+            }
+
+            if (put_block(fcBlockID, fcb)) {
+                fprintf(stderr, "Error creating file control block.\n");
+                return -3;
+            }
+
+            return 0;
+        }
+    }
+
+    fprintf(stderr, "Error finding entry in the file control block.\n");
+    return -2;
 }
 
 /*
@@ -192,6 +246,11 @@ int getType(int* type, int fcBlockID, char* name) {
  * return -2:                       error finding entry in the file control block
  */
 int getStart(int* blockID, int fcBlockID, char* name) {
+    if (fcBlockID == ROOT_BLOCKID && !strcmp(name, ROOT)) {
+        *blockID = ROOT_BLOCKID;
+        return 0;
+    }
+
     char* fcb = malloc(BLOCK_SIZE);
 
     if (get_block(fcBlockID, fcb)) {
@@ -219,15 +278,15 @@ int getStart(int* blockID, int fcBlockID, char* name) {
 }
 
 /*
- * getSize: Get file size of a file from the file control block.
+ * getSize: Get file size of a regular file.
  *
  * precondition: length of name is of valid length
  *
- * @size      Integer Pointer       file size
- * @fcBlock   Integer               location of the file control block
+ * @size    Integer Pointer     file size
+ * @fcb     Integer             location of the starting block of a file
  *
- * return 0:                        successful execution
+ * return 0:                    successful execution
  */
-int getSize(int* size, int fcBlockID, char* name) {
+int getSize(int* size, int fcb) {
     return 0;
 }
