@@ -313,10 +313,11 @@ int getSize(int* size, int blockID) {
         blockID = decode_int(next);
     } while (blockID != BLOCK_END && (*size += BLOCK_SIZE - 3));
 
-    int p = DATA_P;
+    int p = BLOCK_SIZE - 1;
 
-    while (block[p++] != '\0' && ((*size)++)) {
-    }
+    while (block[p--] == '\0');
+
+    *size += --p;
 
     return 0;
 }
