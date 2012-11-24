@@ -49,6 +49,7 @@ int delete(int fd) {
                 memcpy(openTable.fd[j], openTable.fd[j + 1], 2);
             }
 
+            openTable.length--;
             return 0;
         }
     }

@@ -74,6 +74,7 @@ int main() {
 
     // Run constructor for table
     openTable.length = 0;
+
     /* do forever:
      1) print a list of available commands
      2) read a command

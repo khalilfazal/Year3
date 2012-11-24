@@ -315,7 +315,8 @@ int getSize(int* size, int blockID) {
 
     int p = BLOCK_SIZE - 1;
 
-    while (block[p--] == '\0');
+    while (block[p--] == '\0') {
+    }
 
     *size += --p;
 
