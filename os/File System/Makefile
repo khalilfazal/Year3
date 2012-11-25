@@ -1,8 +1,8 @@
 # makefile for BAUSS File System
 #
-#  Created on:     		November 6, 2012
-#  Authors:         	Khalil Fazal	Rayhaan Shakeel		Mahalia Cardinal
-#  Student Numbers:		100 425 046		100 425 726			100 264 193
+#  Created on:         November 6, 2012
+#  Authors:            Khalil Fazal		Rayhaan Shakeel    Mahalia Cardinal
+#  Student Numbers:    100 425 046      100 425 726        100 264 193
 
 PROJECT = sfstest
 
