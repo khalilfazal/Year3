@@ -64,14 +64,12 @@ int sfs_open(char* pathname) {
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
- * return -2:                   error reading file
+ * return -2:                   error getting file type
+ * return -3:                   file is not a regular file
+ * return -4:                   error reading file
  */
 int sfs_read(int fd, int start, int length, char* mem_pointer) {
     int blockID;
-
-    for (int i = 0; i < MAX_IO_LENGTH + 1; i++) {
-        mem_pointer[i] = '\0';
-    }
 
     // Find the block id corresponding to the file descriptor from the file open table
     if (find(&blockID, fd)) {
@@ -79,16 +77,32 @@ int sfs_read(int fd, int start, int length, char* mem_pointer) {
         return -1;
     }
 
-    if (readFile(blockID, start, length, mem_pointer)) {
-        fprintf(stderr, "Error reading file.\n");
+    int type;
+
+    if (getType(&type, blockID)) {
+        fprintf(stderr, "Error getting file type.\n");
         return -2;
+    }
+
+    if (type != FILE) {
+        fprintf(stderr, "File is not a regular file.\n");
+        return -3;
+    }
+
+    for (int i = 0; i < MAX_IO_LENGTH + 1; i++) {
+        mem_pointer[i] = '\0';
+    }
+
+    if (readFile(mem_pointer, blockID, start, length)) {
+        fprintf(stderr, "Error reading file.\n");
+        return -4;
     }
 
     return 1;
 }
 
 /*
- * sfs_write: Writes data stored in a memory location into a files.
+ * sfs_write: Writes data stored in a memory location into a file.
  *
  * @fd              Integer     the file descriptor pointing to the file to read from
  * @start           Integer     the starting char to read from the file
@@ -108,7 +122,7 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
         return -1;
     }
 
-    if (writeFile(blockID, start, length, mem_pointer)) {
+    if (writeFile(mem_pointer, blockID, start, length)) {
         fprintf(stderr, "Error writing file.\n");
         return -2;
     }
@@ -117,14 +131,14 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
 }
 
 /*
- * sfs_readdir: Reads a directory into a memory pointer.
+ * sfs_readdir: Reads a directory's contents into a memory pointer.
  *
  * @fd              Integer     the file descriptor pointing to the file to read from
  * @mem_pointer     String      the string to read into
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
- * return -2:                   error retrieving file block
+ * return -2:                   error reading directory contents
  */
 int sfs_readdir(int fd, char* mem_pointer) {
     int blockID;
@@ -139,35 +153,16 @@ int sfs_readdir(int fd, char* mem_pointer) {
         return -1;
     }
 
-    char* block = malloc(BLOCK_SIZE);
-
-    if (get_block(blockID, block)) {
-        fprintf(stderr, "Error retrieving file block.\n");
+    if (readDir(mem_pointer, blockID)) {
+        fprintf(stderr, "Error reading directory contents.\n");
         return -2;
     }
-
-    int final, p = 0;
-
-    for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
-        if (block[i] != ENTRY_END) {
-            for (int j = i + NAME_P; j < i + MAX_DIRNAME; j++) {
-                if (block[j] != '\0') {
-                    mem_pointer[p++] = block[j];
-                    final = p;
-                }
-            }
-
-            mem_pointer[p++] = ' ';
-        }
-    }
-
-    mem_pointer[final] = '\0';
 
     return 1;
 }
 
 /*
- * sfs_close: Closes a file descriptor to the file.
+ * sfs_close: Closes a file descriptor.
  *
  * @fd          Integer     the file descriptor pointing to the file to read from
  *
@@ -225,7 +220,7 @@ int sfs_delete(char* pathname) {
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (traverse(&blockID, parent)) {
+    if (traverse(&blockID, path)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
@@ -233,7 +228,7 @@ int sfs_delete(char* pathname) {
     int type;
 
     // Get the file type of the file component
-    if (getType(&type, blockID, path[arrayLen(path) - 1])) {
+    if (getTypeFromFCB(&type, blockID, path[arrayLen(path) - 1])) {
         fprintf(stderr, "Error getting the file type.\n");
         return -4;
     }
@@ -293,21 +288,21 @@ int sfs_create(char* pathname, int type) {
         return -2;
     }
 
-    int blockID;
+    int parentBlock;
 
     // Traverse the file system for blockID of the directory containing the component
-    if (traverse(&blockID, parent)) {
+    if (traverse(&parentBlock, parent)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
 
     if (type == 1) {
-        if (createFCB(blockID, path[arrayLen(path) - 1])) {
+        if (createFCB(parentBlock, path[arrayLen(path) - 1])) {
             fprintf(stderr, "Error creating the file control block.\n");
             return -4;
         }
     } else if (type == 0) {
-        if (createFile(blockID, path[arrayLen(path) - 1])) {
+        if (createFile(parentBlock, path[arrayLen(path) - 1])) {
             fprintf(stderr, "Error creating file.\n");
             return -5;
         }
@@ -364,7 +359,6 @@ int sfs_getsize(char* pathname) {
  * return  0:               successful execution, file is a regular file
  * return  1:               successful execution, file is a directory
  * return -1:               error parsing the path
- * return -2:               error finding the parent directory of the file
  * return -3:               error traversing the file system
  * return -4:               error getting the file type
  */
@@ -381,38 +375,26 @@ int sfs_gettype(char* pathname) {
         return -1;
     }
 
-    char** parent = malloc(MAX_PATH);
-
-    for (int i = 0; i < MAX_PATH - 1; i++) {
-        parent[i] = malloc(MAX_DIRNAME);
-    }
-
-    // Find the parent directory
-    if (dirname(parent, path)) {
-        fprintf(stderr, "Error finding the parent directory of the file.\n");
-        return -2;
-    }
-
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (traverse(&blockID, parent)) {
+    if (traverse(&blockID, path)) {
         fprintf(stderr, "Error traversing the file system.\n");
-        return -3;
+        return -2;
     }
 
     int type;
 
     // Get the file type of the file component
-    if (getType(&type, blockID, path[arrayLen(path) - 1])) {
+    if (getType(&type, blockID)) {
         fprintf(stderr, "Error getting the file type.\n");
-        return -4;
+        return -3;
     }
 
     return type;
 }
 
-/* sfs_initialize: Gets the type of a file.
+/* sfs_initialize: Initializes the file system.
  *
  * @erase       Integer     If equal to 1 to erase disk while initializing,
  *                          otherwise just initialize the disk
