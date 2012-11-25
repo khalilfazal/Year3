@@ -220,7 +220,7 @@ int sfs_delete(char* pathname) {
     int blockID;
 
     // Traverse the file system for blockID of the last component
-    if (traverse(&blockID, path)) {
+    if (traverse(&blockID, parent)) {
         fprintf(stderr, "Error traversing the file system.\n");
         return -3;
     }
