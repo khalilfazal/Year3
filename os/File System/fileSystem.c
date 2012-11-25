@@ -111,7 +111,9 @@ int sfs_read(int fd, int start, int length, char* mem_pointer) {
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
- * return -2:                   error writing file
+ * return -2:                   error getting file type
+ * return -3:                   file is not a regular file
+ * return -4:                   error writing file
  */
 int sfs_write(int fd, int start, int length, char* mem_pointer) {
     int blockID;
@@ -122,9 +124,21 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
         return -1;
     }
 
+    int type;
+
+    if (getType(&type, blockID)) {
+        fprintf(stderr, "Error getting file type.\n");
+        return -2;
+    }
+
+    if (type != FILE) {
+        fprintf(stderr, "File is not a regular file.\n");
+        return -3;
+    }
+
     if (writeFile(mem_pointer, blockID, start, length)) {
         fprintf(stderr, "Error writing file.\n");
-        return -2;
+        return -4;
     }
 
     return 1;
@@ -138,7 +152,9 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
  *
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
- * return -2:                   error reading directory contents
+ * return -2:                   error getting file type
+ * return -3:                   file is not a regular file
+ * return -4:                   error reading directory contents
  */
 int sfs_readdir(int fd, char* mem_pointer) {
     int blockID;
@@ -153,9 +169,21 @@ int sfs_readdir(int fd, char* mem_pointer) {
         return -1;
     }
 
+    int type;
+
+    if (getType(&type, blockID)) {
+        fprintf(stderr, "Error getting file type.\n");
+        return -2;
+    }
+
+    if (type != FILE) {
+        fprintf(stderr, "File is not a regular file.\n");
+        return -3;
+    }
+
     if (readDir(mem_pointer, blockID)) {
         fprintf(stderr, "Error reading directory contents.\n");
-        return -2;
+        return -4;
     }
 
     return 1;
