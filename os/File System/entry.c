@@ -119,7 +119,7 @@ int addEntry(int* start, int fcBlockID, char* name, int type) {
 
     fcb[position++] = type;
 
-    for (int i = 0; i < strlen(name); i++) {
+    for (unsigned int i = 0; i < strlen(name); i++) {
         fcb[i + position] = name[i];
     }
 
@@ -157,7 +157,7 @@ int addEntry(int* start, int fcBlockID, char* name, int type) {
  * return -2:                       error finding entry in the file control block
  * return -3:                       error creating file control block
  */
-int removeEntry(int* start, int fcBlockID, char* name) {
+int removeEntry(int* start, int fcBlockID, const char* name) {
     char* fcb = malloc(BLOCK_SIZE);
 
     if (get_block(fcBlockID, fcb)) {
@@ -169,7 +169,6 @@ int removeEntry(int* start, int fcBlockID, char* name) {
         char* line = &fcb[i];
         char entryName[MAX_DIRNAME - 1];
         strncpy(entryName, &line[NAME_P], MAX_DIRNAME - 1);
-        entryName[MAX_DIRNAME - 1] = '\0';
 
         if (!strcmp(entryName, name)) {
             char _start[2];
@@ -198,7 +197,29 @@ int removeEntry(int* start, int fcBlockID, char* name) {
 }
 
 /*
- * getType: Get file type of a file from the file control block
+ * getType: Get the file type
+ *
+ * @type        Integer Pointer     the file type
+ * @blockID     Integer             the starting block id of the file
+ *
+ * return  0:                       successful execution
+ * return -1:                       error retrieving the parent file control block
+ */
+int getType(int* type, int blockID) {
+    char* block = malloc(BLOCK_SIZE);
+
+    if (get_block(blockID, block)) {
+        fprintf(stderr, "Error retrieving the parent file control block.\n");
+        return -1;
+    }
+
+    *type = block[BLOCK_START];
+
+    return 0;
+}
+
+/*
+ * getTypeFromFCB: Get the file type of a file from the fcb
  *
  * precondition: length of name is of valid length
  *
@@ -209,7 +230,7 @@ int removeEntry(int* start, int fcBlockID, char* name) {
  * return -1:                       error retrieving the file control block
  * return -2:                       error finding entry in the file control block
  */
-int getType(int* type, int fcBlockID, char* name) {
+int getTypeFromFCB(int* type, int fcBlockID, const char* name) {
     if (fcBlockID == ROOT_BLOCKID && !strcmp(name, ROOT)) {
         *type = DIRECTORY;
         return 0;
@@ -225,7 +246,6 @@ int getType(int* type, int fcBlockID, char* name) {
             char* line = &fcb[i];
             char entryName[MAX_DIRNAME - 1];
             strncpy(entryName, &line[NAME_P], MAX_DIRNAME - 1);
-            entryName[MAX_DIRNAME - 1] = '\0';
 
             if (!strcmp(entryName, name)) {
                 *type = line[TYPE_P];
@@ -251,7 +271,7 @@ int getType(int* type, int fcBlockID, char* name) {
  * return -1:                       error retrieving the file control block
  * return -2:                       error finding entry in the file control block
  */
-int getStart(int* blockID, int fcBlockID, char* name) {
+int getStart(int* blockID, int fcBlockID, const char* name) {
     if (fcBlockID == ROOT_BLOCKID && !strcmp(name, ROOT)) {
         *blockID = ROOT_BLOCKID;
         return 0;
@@ -268,7 +288,6 @@ int getStart(int* blockID, int fcBlockID, char* name) {
         char* line = &fcb[i];
         char entryName[MAX_DIRNAME - 1];
         strncpy(entryName, &line[NAME_P], MAX_DIRNAME - 1);
-        entryName[MAX_DIRNAME - 1] = '\0';
 
         if (!strcmp(entryName, name)) {
             char start[2];

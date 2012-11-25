@@ -20,13 +20,16 @@ int getFreeBlock(int* blockID);
 int addEntry(int* start, int fcBlockID, char* name, int type);
 
 // Removes an entry from a fcb
-int removeEntry(int* start, int fcBlockID, char* name);
+int removeEntry(int* start, int fcBlockID, const char* name);
 
-// Get file type of a file from the file control block
-int getType(int* type, int fcBlockID, char* name);
+// Get the file type
+int getType(int* type, int blockID);
+
+// Get the file type of a file from the fcb
+int getTypeFromFCB(int* type, int blockID, const char* name);
 
 // Get the starting block of the file path component from the file control block.
-int getStart(int* blockID, int fcBlockID, char* name);
+int getStart(int* blockID, int fcBlockID, const char* name);
 
 // Get file size of a regular file
 int getSize(int* size, int blockID);
