@@ -129,7 +129,7 @@ int createFile(int fcBlockID, char* name) {
  * return -4:               error creating file block
  * return -5:               error removing entry from the file control block
  */
-int deleteDir(int fcBlockID, char* name) {
+int deleteDir(int fcBlockID, const char* name) {
     int blockID;
 
     if (getStart(&blockID, fcBlockID, name)) {
@@ -184,7 +184,7 @@ int deleteDir(int fcBlockID, char* name) {
  * return -2:               error retrieving file block
  * return -3:               error creating file block
  */
-int deleteFile(int fcBlockID, char* name) {
+int deleteFile(int fcBlockID, const char* name) {
     int currentBlock;
 
     // Remove references to the file from the parent file control block
@@ -238,13 +238,13 @@ int deleteFile(int fcBlockID, char* name) {
  * return -4:                   error retrieving file block
  * return -5:                   error creating file block
  */
-int writeFile(int blockID, int start, int length, char* mem_pointer) {
+int writeFile(const char* mem_pointer, int blockID, int start, unsigned int length) {
     if (start < 0) {
         fprintf(stderr, "Invalid start value.\n");
         return -1;
     }
 
-    if (length < 0 || length != strlen(mem_pointer)) {
+    if (length != strlen(mem_pointer)) {
         fprintf(stderr, "Invalid length.\n");
         return -2;
     }
@@ -375,17 +375,17 @@ int writeFile(int blockID, int start, int length, char* mem_pointer) {
 /*
  * readFile: reads a file
  *
+ * @mem_pointer     String      where the contents of the file are read to
  * @blockID         Integer     location of the starting block of a file
  * @start           Integer     position in the file
  * @length          Integer     length of mem_pointer
- * @mem_pointer     String      where the contents of the file are read to
  *
  * return  0:                   successful execution
  * return -1:                   invalid start value
  * return -2:                   error retrieving file block
  * return -3:                   error reading the file from that position
  */
-int readFile(int blockID, int start, int length, char* mem_pointer) {
+int readFile(char* mem_pointer, int blockID, int start, int length) {
     if (start < 0) {
         fprintf(stderr, "Invalid start value.\n");
         return -1;
@@ -474,6 +474,44 @@ int readFile(int blockID, int start, int length, char* mem_pointer) {
             p = DATA_P;
         }
     } while (length > 0);
+
+    return 0;
+}
+
+/*
+ * readDir: reads a directory
+ *
+ * @mem_pointer:    String      where the contents of the directory are read to
+ * @blockID         Integer     the block id of the directory
+ *
+ * return  0:                   successful execution
+ * return -1:                   error retrieving file block
+ */
+int readDir(char* mem_pointer, int blockID) {
+    char* block = malloc(BLOCK_SIZE);
+
+    if (get_block(blockID, block)) {
+        fprintf(stderr, "Error retrieving file block.\n");
+        return -1;
+    }
+
+    int final = 0;
+    int p = 0;
+
+    for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
+        if (block[i] != ENTRY_END) {
+            for (int j = i + NAME_P; j < i + MAX_DIRNAME; j++) {
+                if (block[j] != '\0') {
+                    mem_pointer[p++] = block[j];
+                    final = p;
+                }
+            }
+
+            mem_pointer[p++] = ' ';
+        }
+    }
+
+    mem_pointer[final] = '\0';
 
     return 0;
 }

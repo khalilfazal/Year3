@@ -22,13 +22,16 @@ int createFCB(int parentFCBID, char* name);
 int createFile(int fcBlockID, char* name);
 
 // Deletes a directory
-int deleteDir(int fcBlockID, char* name);
+int deleteDir(int fcBlockID, const char* name);
 
 // Deletes a file
-int deleteFile(int fcBlockID, char* name);
+int deleteFile(int fcBlockID, const char* name);
 
 // Writes to a file
-int writeFile(int blockID, int start, int length, char* mem_pointer);
+int writeFile(const char* mem_pointer, int blockID, int start, unsigned int length);
 
 // Reads a file
-int readFile(int blockID, int start, int length, char* mem_pointer);
+int readFile(char* mem_pointer, int blockID, int start, int length);
+
+// Reads a directory
+int readDir(char* mem_pointer, int blockID);
