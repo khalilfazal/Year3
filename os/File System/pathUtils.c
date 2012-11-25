@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "entry.h"
 #include "fControl.h"
 #include "pathUtils.h"
 
@@ -22,7 +23,7 @@
  * return 3:                        pathname contains consecutive forward slashes ("//")
  * return 4:                        component contains more than six char
  */
-int parsePath(char** path, char* pathname) {
+int parsePath(char** path, const char* pathname) {
     // If pathname is an empty string, return with an error.
     if (pathname[0] == '\0') {
         fprintf(stderr, "Pathname is empty.\n");
@@ -36,7 +37,7 @@ int parsePath(char** path, char* pathname) {
     }
 
     // If the pathname contains consecutive forward slashes ("//").
-    for (int i = 0; i < strlen(pathname) - 1; i++) {
+    for (unsigned int i = 0; i < strlen(pathname) - 1; i++) {
         if (pathname[i] == '/' && pathname[i + 1] == '/') {
             fprintf(stderr, "Pathname contains consecutive forward slashes (\"//\").\n");
             return 3;
@@ -56,7 +57,7 @@ int parsePath(char** path, char* pathname) {
     filePos = 0;
 
     // Loop through each char in the pathname, starting from the second char.
-    for (int i = 1; i < strlen(pathname); i++) {
+    for (unsigned int i = 1; i < strlen(pathname); i++) {
 
         // If the current char in the pathname is a forward slash.
         if (pathname[i] == '/') {
@@ -109,7 +110,7 @@ int traverse(int* blockID, char** path) {
         int type;
 
         // Get the file type of the file component
-        if (getType(&type, *blockID, path[i])) {
+        if (getTypeFromFCB(&type, *blockID, path[i])) {
             fprintf(stderr, "Error getting the file type.\n");
             return -1;
         }

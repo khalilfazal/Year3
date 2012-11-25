@@ -8,7 +8,7 @@
 #define ROOT_BLOCKID 0
 
 // Parses a path string into an array of path components.
-int parsePath(char** path, char* pathname);
+int parsePath(char** path, const char* pathname);
 
 // Traverse through the file system and retrieve the blockID of the last component.
 int traverse(int* blockID, char** path);
