@@ -153,7 +153,7 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
  * return  1:                   successful execution
  * return -1:                   error finding opened block id from the file open table
  * return -2:                   error getting file type
- * return -3:                   file is not a regular file
+ * return -3:                   file is not a directory
  * return -4:                   error reading directory contents
  */
 int sfs_readdir(int fd, char* mem_pointer) {
@@ -177,7 +177,7 @@ int sfs_readdir(int fd, char* mem_pointer) {
     }
 
     if (type != DIRECTORY) {
-        fprintf(stderr, "File is not a regular file.\n");
+        fprintf(stderr, "File is not a directory.\n");
         return -3;
     }
 
