@@ -34,4 +34,4 @@ int writeFile(const char* mem_pointer, int blockID, int start, unsigned int leng
 int readFile(char* mem_pointer, int blockID, int start, int length);
 
 // Reads a directory
-int readDir(char* mem_pointer, int blockID);
+int readDir(char* mem_pointer, int blockID, int step);

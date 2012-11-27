@@ -483,11 +483,13 @@ int readFile(char* mem_pointer, int blockID, int start, int length) {
  *
  * @mem_pointer:    String      where the contents of the directory are read to
  * @blockID         Integer     the block id of the directory
+ * @step            Integer     how far through the directory has been scanned
  *
+ * return  1:                   Reached end of directory
  * return  0:                   successful execution
  * return -1:                   error retrieving file block
  */
-int readDir(char* mem_pointer, int blockID) {
+int readDir(char* mem_pointer, int blockID, int step) {
     char* block = malloc(BLOCK_SIZE);
 
     if (get_block(blockID, block)) {
@@ -499,7 +501,7 @@ int readDir(char* mem_pointer, int blockID) {
     int p = 0;
 
     for (int i = ENTRY_START; i < BLOCK_SIZE; i += ENTRY_LENGTH) {
-        if (block[i] != ENTRY_END) {
+        if (block[i] != ENTRY_END && step-- == 0) {
             for (int j = i + NAME_P; j < i + MAX_DIRNAME; j++) {
                 if (block[j] != '\0') {
                     mem_pointer[p++] = block[j];
@@ -512,6 +514,10 @@ int readDir(char* mem_pointer, int blockID) {
     }
 
     mem_pointer[final] = '\0';
+
+    if (mem_pointer[0] == '\0') {
+        return 1;
+    }
 
     return 0;
 }

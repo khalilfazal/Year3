@@ -14,7 +14,7 @@
  * @fd          Integer             the file descriptor
  *
  * return 0:                        successful execution
- * return 1:                        unable to find the corresponding block id
+ * return 1:                        unable to find the file descriptor
  */
 int find(int* blockID, int fd) {
     for (int i = 0; i < openTable.length; i++) {
@@ -24,7 +24,7 @@ int find(int* blockID, int fd) {
         }
     }
 
-    fprintf(stderr, "Unable to find the corresponding block id.\n");
+    fprintf(stderr, "Unable to find the file descriptor.\n");
     return 1;
 }
 
@@ -46,7 +46,7 @@ int delete(int fd) {
     for (int i = 0; i < openTable.length; i++) {
         if (openTable.fd[i][0] == fd + 1) {
             for (int j = i; j < openTable.length; j++) {
-                memcpy(openTable.fd[j], openTable.fd[j + 1], 2);
+                memcpy(openTable.fd[j], openTable.fd[j + 1], 3);
             }
 
             openTable.length--;
@@ -70,7 +70,7 @@ int add(int* fd, int blockID) {
     openTable.length++;
 
     for (int i = openTable.length - 2; i > -1; i--) {
-        memcpy(openTable.fd[i + 1], openTable.fd[i], 2);
+        memcpy(openTable.fd[i + 1], openTable.fd[i], 3);
     }
 
     openTable.fd[0][0] = openTable.fd[1][0] + 1;
@@ -88,10 +88,50 @@ int add(int* fd, int blockID) {
  *
  */
 void deleteAll(int blockID) {
-
     for (int i = 0; i < openTable.length; i++) {
         if (openTable.fd[i][1] == blockID) {
             delete(i);
         }
     }
+}
+
+/*
+ * getStep: Gets how far a directory has been scanned
+ *
+ * @step        Integer Pointer     the step through a directory
+ * @fd          Integer             the file descriptor
+ *
+ * return 0:                        successful execution
+ * return 1:                        unable to find the file descriptor
+ */
+int getStep(int* step, int fd) {
+    for (int i = 0; i < openTable.length; i++) {
+        if (openTable.fd[i][0] == fd + 1) {
+            *step = openTable.fd[i][2];
+            return 0;
+        }
+    }
+
+    fprintf(stderr, "Unable to find the file descriptor.\n");
+    return 1;
+}
+
+/*
+ * incStep: Increment the step through a directory
+ *
+ * @fd          Integer             the file descriptor
+ *
+ * return 0:                        successful execution
+ * return 1:                        unable to find the file descriptor
+ */
+int incStep(int fd) {
+    for (int i = 0; i < openTable.length; i++) {
+        if (openTable.fd[i][0] == fd + 1) {
+            openTable.fd[i][2]++;
+            return 0;
+        }
+    }
+
+    fprintf(stderr, "Unable to find the file descriptor.\n");
+    return 1;
 }

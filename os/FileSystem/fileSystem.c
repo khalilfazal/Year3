@@ -151,10 +151,14 @@ int sfs_write(int fd, int start, int length, char* mem_pointer) {
  * @mem_pointer     String      the string to read into
  *
  * return  1:                   successful execution
+ * return  0:                   reached end of directory
  * return -1:                   error finding opened block id from the file open table
  * return -2:                   error getting file type
  * return -3:                   file is not a directory
- * return -4:                   error reading directory contents
+ * return -4:                   error finding how far a directory has been scanned
+ * return -5:                   error incrementing the step through directory
+ * return -6:                   error resetting the step through the directory
+ * return -7:                   error reading directory contents
  */
 int sfs_readdir(int fd, char* mem_pointer) {
     int blockID;
@@ -181,12 +185,27 @@ int sfs_readdir(int fd, char* mem_pointer) {
         return -3;
     }
 
-    if (readDir(mem_pointer, blockID)) {
-        fprintf(stderr, "Error reading directory contents.\n");
+    int step;
+
+    if (getStep(&step, fd)) {
+        fprintf(stderr, "Error finding how far a directory has been scanned.\n");
         return -4;
     }
 
-    return 1;
+    switch (readDir(mem_pointer, blockID, step)) {
+        case 0:
+            if (incStep(fd)) {
+                fprintf(stderr, "Error incrementing the step through directory.\n");
+                return -5;
+            }
+
+            return 1;
+        case 1:
+            return 0;
+        default:
+            fprintf(stderr, "Error reading directory contents.\n");
+            return -7;
+    }
 }
 
 /*

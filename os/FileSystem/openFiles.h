@@ -6,7 +6,7 @@
 #define MAX_OPEN_FILES 512
 
 struct table {
-    int fd[MAX_OPEN_FILES][2];
+    int fd[MAX_OPEN_FILES][3];
     int length;
 };
 
@@ -23,3 +23,9 @@ int add(int* fd, int blockID);
 
 // Deletes all entries in the priority queue with value blockID.
 void deleteAll(int blockID);
+
+// Gets how far a directory has been scanned
+int getStep(int* step, int fd);
+
+// Increment the step through a directory
+int incStep(int fd);
